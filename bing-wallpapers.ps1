@@ -100,7 +100,7 @@ $pageSize = 8
 $items = New-Object System.Collections.ArrayList
 if ($files -gt 0) {
     if ($useJsonSource) {
-        $jsonImgs = ConvertFrom-Json -InputObject $(Invoke-WebRequest -Uri 'https://api45gabs.azurewebsites.net/api/sample/bingphotos')
+        $jsonImgs = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri 'https://api45gabs.azurewebsites.net/api/sample/bingphotos').Content
         for ($i = 0; $i -lt $files; $i++) {
             [datetime]$imageDate = [datetime]::ParseExact($jsonImgs[$i].startdate, 'yyyyMMdd', $null)
             [string]$imageUrl = "$hostname$($jsonImgs[$i].urlBase)_$resolution.jpg"
@@ -152,7 +152,7 @@ foreach ($item in $items) {
 
     # Download the enclosure if we haven't done so already
     if (!(Test-Path $destination)) {
-        Write-Debug "Downloading image to $destination"
+        Write-Verbose "Downloading image to $destination"
         $client.DownloadFile($url, "$destination")
     }
 }
