@@ -143,16 +143,17 @@ if ($files -gt 0) {
 }
 
 $items = $items | Sort-Object -Property date -Unique
-Write-Host "Downloading images..."
+Write-Verbose "Downloading images..."
 $client = New-Object System.Net.WebClient
 foreach ($item in $items) {
     $baseName = $item.date.ToString("yyyy-MM-dd")
     $destination = Join-Path $downloadFolder "$baseName.jpg"
+    $destinationMetadata = Join-Path $downloadFolder $($baseName + "_meta.jpg")
     $url = $item.url
 
     # Download the enclosure if we haven't done so already
-    if (!(Test-Path $destination)) {
-        Write-Verbose "Downloading image to $destination"
+    if (!(Test-Path $destination) -and !(Test-Path $destinationMetadata)) {
+        Write-Host "Downloading image to $destination"
         $client.DownloadFile($url, "$destination")
     }
 }
@@ -161,7 +162,7 @@ if ($removeExistingFiles -and ($files -gt 0)) {
     # We do not want to keep every file; remove the old ones
     Write-Host "Cleaning the directory..."
     $i = 1
-    Get-ChildItem -Filter "????-??-??.jpg" $downloadFolder | Sort-Object -Descending FullName | ForEach-Object {
+    Get-ChildItem -Filter "*.jpg" "$downloadFolder\*" -Include "????-??-??.jpg","????-??-??_meta.jpg" | Sort-Object -Descending FullName | ForEach-Object {
         if ($i -gt $files) {
             # We have more files than we want, delete the extra files
             $fileName = $_.FullName
