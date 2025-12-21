@@ -143,7 +143,7 @@ if ($files -gt 0) {
 }
 
 $items = $items | Sort-Object -Property date -Unique
-Write-Verbose "Downloading images..."
+Write-Verbose "Downloading $($items.length) images..."
 $client = New-Object System.Net.WebClient
 foreach ($item in $items) {
     $baseName = $item.date.ToString("yyyy-MM-dd")
@@ -153,7 +153,9 @@ foreach ($item in $items) {
 
     # Download the enclosure if we haven't done so already
     if (!(Test-Path $destination) -and !(Test-Path $destinationMetadata)) {
-        Write-Host "Downloading image to $destination"
+        Write-Verbose "Test-Path $destination $(Test-Path $destination)"
+        Write-Verbose "Test-Path $destinationMetadata $(Test-Path $destinationMetadata)"
+        Write-Verbose "Downloading image to $destination"
         $client.DownloadFile($url, "$destination")
     }
 }
