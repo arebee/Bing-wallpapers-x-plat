@@ -6,15 +6,17 @@
 # License: MIT license
 Param(
     # Get the Bing image of this country
-    [ValidateSet('auto', 'ar-XA', 'bg-BG', 'cs-CZ', 'da-DK', 'de-AT',
-        'de-CH', 'de-DE', 'el-GR', 'en-AU', 'en-CA', 'en-GB', 'en-ID',
-        'en-IE', 'en-IN', 'en-MY', 'en-NZ', 'en-PH', 'en-SG', 'en-US',
-        'en-XA', 'en-ZA', 'es-AR', 'es-CL', 'es-ES', 'es-MX', 'es-US',
-        'es-XL', 'et-EE', 'fi-FI', 'fr-BE', 'fr-CA', 'fr-CH', 'fr-FR',
-        'he-IL', 'hr-HR', 'hu-HU', 'it-IT', 'ja-JP', 'ko-KR', 'lt-LT',
-        'lv-LV', 'nb-NO', 'nl-BE', 'nl-NL', 'pl-PL', 'pt-BR', 'pt-PT',
-        'ro-RO', 'ru-RU', 'sk-SK', 'sl-SL', 'sv-SE', 'th-TH', 'tr-TR',
-        'uk-UA', 'zh-CN', 'zh-HK', 'zh-TW')][string]$locale = 'auto',
+    [ValidateSet(
+        'auto', 'ar-XA', 'bg-BG', 'cs-CZ', 'da-DK', 'de-AT', 'de-CH',
+        'de-DE', 'el-GR', 'en-AU', 'en-CA', 'en-GB', 'en-ID', 'en-IE',
+        'en-IN', 'en-MY', 'en-NZ', 'en-PH', 'en-SG', 'en-US', 'en-XA',
+        'en-ZA', 'es-AR', 'es-CL', 'es-ES', 'es-MX', 'es-US', 'es-XL',
+        'et-EE', 'fi-FI', 'fr-BE', 'fr-CA', 'fr-CH', 'fr-FR', 'he-IL',
+        'hr-HR', 'hu-HU', 'it-IT', 'ja-JP', 'ko-KR', 'lt-LT', 'lv-LV',
+        'nb-NO', 'nl-BE', 'nl-NL', 'pl-PL', 'pt-BR', 'pt-PT', 'ro-RO',
+        'ru-RU', 'sk-SK', 'sl-SL', 'sv-SE', 'th-TH', 'tr-TR', 'uk-UA',
+        'zh-CN', 'zh-HK', 'zh-TW'
+    )][string]$locale = 'auto',
 
     # Download the latest $files wallpapers.
     [ValidateRange("Positive")]
@@ -24,16 +26,16 @@ Param(
     [switch]$removeExistingFiles,
 
     # Resolution of the image to download
-    [ValidateSet('auto', '800x600', '1024x768', '1280x720', '1280x768',
-        '1366x768', '1920x1080', '1920x1200', '720x1280', '768x1024',
-        '768x1280', '768x1366', '1080x1920')][string]$resolution = 'auto',
+    [ValidateSet(
+        'auto', '800x600', '1024x768', '1280x720', '1280x768', '1366x768',
+        '1920x1080', '1920x1200', '720x1280', '768x1024', '768x1280',
+        '768x1366', '1080x1920'
+    )][string]$resolution = 'auto',
 
     # Destination folder to download the wallpapers to
-    [string]$downloadFolder = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers"),
-
-    # Use alternative API with > 500 images
-    [switch]$useJsonSource
+    [string]$downloadFolder = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers")
 )
+
 # Max item count: the number of images we'll query for
 # [int]$maxItemCount = [System.Math]::max(1, [System.Math]::max($files, 8))
 # URI to fetch the image locations from
