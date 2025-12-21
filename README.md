@@ -1,5 +1,14 @@
 Bing image of the day
 =====================
+
+This is a fork of https://github.com/timothymctim/Bing-wallpapers
+
+## Added Features
+1. Can use an alternate (unofficial) source of image metadata: `-useJsonSource`
+1. Adding a script (`update-imagemetadata.ps1`) that uses  [ExifTool](https://exiftool.org/) to update the image metadata in the source files to reflect the metadata in the feed. The images don't include them, strangely. Note that ExifTool is available for MacOS and Windows, but not Linux.
+
+---
+
 This Windows PowerShell script automatically fetches the Bing image of
 the day.
 Using this script you can set the Bing image of the day as your
