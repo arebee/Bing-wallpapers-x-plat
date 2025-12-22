@@ -33,7 +33,11 @@ Param(
     )][string]$resolution = 'auto',
 
     # Destination folder to download the wallpapers to
-    [string]$downloadFolder = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers")
+    [string]$downloadFolder = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers"),
+
+
+    # Use alternative API with > 500 images
+    [switch]$useJsonSource = $false
 )
 
 # Max item count: the number of images we'll query for
