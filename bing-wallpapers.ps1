@@ -161,7 +161,7 @@ foreach ($item in $items) {
     if (!(Test-Path $destination) -and !(Test-Path $destinationMetadata)) {
         Write-Verbose "Test-Path $destination $(Test-Path $destination)"
         Write-Verbose "Test-Path $destinationMetadata $(Test-Path $destinationMetadata)"
-        Write-Verbose "Downloading image to $destination"
+        Write-Verbose "Downloading image`nfrom: $url`nto: $destination"
         $client.DownloadFile($url, "$destination")
     }
 }
