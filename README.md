@@ -1,11 +1,18 @@
-Bing image of the day
-=====================
+# Bing image of the day
 
-This is a fork of https://github.com/timothymctim/Bing-wallpapers
+This is a fork of <https://github.com/timothymctim/Bing-wallpapers>
+mainly to add MacOS support.
 
 ## Added Features
-1. Can use an alternate (unofficial) source of image metadata: `-useJsonSource`
-1. Adding a script (`update-imagemetadata.ps1`) that uses  [ExifTool](https://exiftool.org/) to update the image metadata in the source files to reflect the metadata in the feed. The images don't include them, strangely. Note that ExifTool is available for MacOS and Windows, but not Linux.
+
+1. Supports MacOS and Linux execution using PowerShell on those
+platforms. No testing on Linux.
+1. Can use an alternate (unofficial) source of image metadata:
+`-useJsonSource`
+1. A script (`update-imagemetadata.ps1`) that uses [ExifTool](https://exiftool.org/)
+to update the image metadata in the source files to reflect the
+metadata in the feed. The images don't include them, strangely. Note
+that ExifTool is available for MacOS and Windows, but not Linux.
 
 ---
 
@@ -22,8 +29,8 @@ desktop](http://blogs.msdn.com/b/buckh/archive/2013/01/02/bing-desktop-set-your-
 (which might be unavailable in your region or you do not want to
 install).
 
-Script options
---------------
+## Script options
+
 The script supports several options which allows you to customize the
 behavior.
 
@@ -79,13 +86,13 @@ behavior.
   **Remarks** The folder will automatically be created if it doesn’t
   exist already.
 
-Set as your wallpaper
-=====================
+## Set as your wallpaper
+
 With a few additional steps you’re able to automatically download the
 latest images and set them as your wallpaper.
 
-Automatically run the script
-----------------------------
+### Automatically run the script
+
 First, make sure that you can actually run PowerShell scripts.
 You might have to set the execution policy to unrestricted by running
 `Set-ExecutionPolicy Unrestricted` in a PowerShell window executed with
@@ -104,8 +111,8 @@ Finally, add the script as an action.
 Run the program `powershell` with the arguments `-WindowStyle Hidden
 -file "<path to the script>" <optional script arguments>`.
 
-Changing your background settings
----------------------------------
+### Changing your background settings
+
 Go to `Settings` ⇨ `Personalization` ⇨ `Background` and select
 `Slideshow` as the `Background` type.
 Hit the `Browse` button to select the folder you automatically download
