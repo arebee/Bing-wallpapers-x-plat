@@ -29,7 +29,7 @@ Param(
     [ValidateSet(
         'auto', '800x600', '1024x768', '1280x720', '1280x768', '1366x768',
         '1920x1080', '1920x1200', '720x1280', '768x1024', '768x1280',
-        '768x1366', '1080x1920'
+        '768x1366', '1080x1920', 'UHD'
     )][string]$resolution = 'auto',
 
     # Destination folder to download the wallpapers to
@@ -90,8 +90,11 @@ if ($resolution -eq 'auto') {
     elseif ($height -le 1080) {
         $resolution = '1920x1080'
     }
+    elseif ($primaryScreen.Bounds.Width -le 1920) {
+        $resolution = '1920x1080'
+    }
     else {
-        $resolution = '1920x1200'
+        $resolution = 'UHD'
     }
 }
 
