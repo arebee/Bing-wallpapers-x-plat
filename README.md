@@ -1,7 +1,7 @@
 # Bing image of the day - Cross Platform
 
 This is a fork of <https://github.com/timothymctim/Bing-wallpapers>
-mainly to add MacOS support.
+mainly to add MacOS support. Thanks for the project [Tim!](https://github.com/timothymctim)
 
 ## Added Features
 
@@ -27,6 +27,13 @@ don't provide a preference. This seemed to occur in a dual monitor
 situation where the retina display in the laptop and is mirroring
 an external display. You may want to manually specify the resolution
 manually instead.
+
+## Something Similar
+
+<https://github.com/dabeastnet/PixelPoSH> generates geometric desktop
+images using an SVG generator. Thanks for the tip 
+[James Brundage @ BlueSky](https://bsky.app/profile/mrpowershell.com)
+check out his repos too.
 
 ---
 
