@@ -64,10 +64,10 @@ if ($resolution -eq 'auto') {
     elseif ($PSVersionTable.OS.Contains('Darwin')) {
         Write-Verbose 'On MacOS'
         $null = system_profiler SPDisplaysDataType -json | ConvertFrom-Json -OutVariable displayInfo
-        foreach ($item in $displayInfo) {
-            if ($item[0].SPDisplaysDataType[0].spdisplays_ndrvs.spdisplays_main -eq 'spdisplays_yes') {
-                [int]$width = $item[0].SPDisplaysDataType[0].spdisplays_ndrvs.spdisplays_resolution.split("@")[0].split('x')[0].Trim()
-                [int]$height = $item[0].SPDisplaysDataType[0].spdisplays_ndrvs.spdisplays_resolution.split("@")[0].split('x')[1].Trim()
+        foreach ($display in $displayInfo[0].SPDisplaysDataType[0].spdisplays_ndrvs) {
+            if ($display.spdisplays_main -eq 'spdisplays_yes') {
+                [int]$width = $display._spdisplays_pixels.split('x')[0].Trim()
+                [int]$height = $display._spdisplays_pixels.split('x')[1].Trim()
             }
         }
     }
@@ -90,12 +90,13 @@ if ($resolution -eq 'auto') {
     elseif ($height -le 1080) {
         $resolution = '1920x1080'
     }
-    elseif ($primaryScreen.Bounds.Width -le 1920) {
+    elseif ($width -le 1920) {
         $resolution = '1920x1080'
     }
     else {
         $resolution = 'UHD'
     }
+    Write-Verbose "Auto-Identified resolution = $resolution, Width $width Height $height"
 }
 
 # Check if download folder exists and otherwise create it
@@ -122,7 +123,7 @@ if ($files -gt 0) {
     }
     else {
         <# Action when all if and elseif conditions are false #>
-        if ($files -gt 15) { $files = 15; Write-Debug "Bing API supports a maximum of 15 images" }
+        if ($files -gt 15) { $files = 15; Write-Verbose "Bing API supports a maximum of 15 images" }
         $pageAndRemainder = [System.Math]::DivRem($files, $pageSize)
         # To support remainder logic vs 0 offset pages
         if (($pageAndRemainder.item2 -eq 0) -and ($pagesAndRemainder.item1 -ne 0)) {
@@ -134,6 +135,7 @@ if ($files -gt 0) {
         for ($i = 0; $i -le $pages; $i++) {
             if ($pages -eq $i) { $pageItems = $pageAndRemainder.Item2 } else { $pageItems = $pageSize }
             [string]$pageUri = $uri + "&idx=$($i * $pageSize)&n=$pageItems"
+            Write-Verbose "Fetching Page $($i + 1)"
             $request = Invoke-WebRequest -Uri $pageUri -DisableKeepAlive -UserAgent 'parp-1.0'
             [xml]$content = $request.Content
             
@@ -152,7 +154,7 @@ if ($files -gt 0) {
 }
 
 $items = $items | Sort-Object -Property date -Unique
-Write-Verbose "Downloading $($items.length) images..."
+Write-Verbose "$($items.length) images to check..."
 $client = New-Object System.Net.WebClient
 foreach ($item in $items) {
     $baseName = $item.date.ToString("yyyy-MM-dd")
@@ -173,7 +175,7 @@ if ($removeExistingFiles -and ($files -gt 0)) {
     # We do not want to keep every file; remove the old ones
     Write-Host "Cleaning the directory..."
     $i = 1
-    Get-ChildItem -Filter "*.jpg" "$downloadFolder\*" -Include "????-??-??.jpg","????-??-??_meta.jpg" | Sort-Object -Descending FullName | ForEach-Object {
+    Get-ChildItem -Filter "*.jpg" "$downloadFolder\*" -Include "????-??-??.jpg", "????-??-??_meta.jpg" | Sort-Object -Descending FullName | ForEach-Object {
         if ($i -gt $files) {
             # We have more files than we want, delete the extra files
             $fileName = $_.FullName
