@@ -31,7 +31,7 @@ manually instead.
 ## Something Similar
 
 <https://github.com/dabeastnet/PixelPoSH> generates geometric desktop
-images using an SVG generator. Thanks for the tip 
+images using an SVG generator. Thanks for the tip
 [James Brundage @ BlueSky](https://bsky.app/profile/mrpowershell.com)
 check out his repos too.
 
