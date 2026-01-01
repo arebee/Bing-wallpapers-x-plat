@@ -1,4 +1,4 @@
-# Bing image of the day
+# Bing image of the day - Cross Platform
 
 This is a fork of <https://github.com/timothymctim/Bing-wallpapers>
 mainly to add MacOS support.
@@ -7,14 +7,30 @@ mainly to add MacOS support.
 
 1. Supports MacOS and Linux execution using PowerShell on those
 platforms. No testing on Linux.
-1. Can use an alternate (unofficial) source of image metadata:
-`-useJsonSource`
+1. Can use an alternate (unofficial) source of image metadata by
+specifying `-useJsonSource` on the command line. The official `xml`
+endpoint supports the last 14 days.
 1. A script (`update-imagemetadata.ps1`) that uses [ExifTool](https://exiftool.org/)
 to update the image metadata in the source files to reflect the
-metadata in the feed. The images don't include them, strangely. Note
-that ExifTool is available for MacOS and Windows, but not Linux.
+metadata in the feed. The images don't include them, strangely.
+    1. ExifTool is available for MacOS and Windows, but not Linux.
+    1. This script uses the information in the JSON endpoint source.
+
+### Notes
+
+1. Support for the `auto` resolution detection on MacOS relies on the
+information returned from `system_profiler SPDisplaysDataType` and
+with multiple displays this may provide a lower resolution than
+you may desire. Set `$VerbsosePreference = 'Continue'` to see
+diagnostic messages such as the screen resolution detected if you
+don't provide a preference. This seemed to occur in a dual monitor
+situation where the retina display in the laptop and is mirroring
+an external display. You may want to manually specify the resolution
+manually instead.
 
 ---
+
+## Bing image of the day
 
 This Windows PowerShell script automatically fetches the Bing image of
 the day.
