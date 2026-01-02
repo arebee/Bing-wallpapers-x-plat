@@ -6,7 +6,8 @@ mainly to add MacOS support. Thanks for the project [Tim!](https://github.com/ti
 ## Added Features
 
 1. Supports MacOS and Linux execution using PowerShell on those
-platforms. No testing on Linux.
+platforms. While I haven't tested on Linux, it has worked on one
+user's machine. :-)
 1. Can use an alternate (unofficial) source of image metadata by
 specifying `-useJsonSource` on the command line. The official `xml`
 endpoint supports the last 14 days.
@@ -15,6 +16,9 @@ to update the image metadata in the source files to reflect the
 metadata in the feed. The images don't include them, strangely.
     1. ExifTool is available for MacOS and Windows, but not Linux.
     1. This script uses the information in the JSON endpoint source.
+1. Renamed script and paramaters to be more vernacular PowerShell.
+
+### Added Parameters
 
 ### Notes
 
@@ -57,7 +61,7 @@ install).
 The script supports several options which allows you to customize the
 behavior.
 
-* `-locale` Get the Bing image of the day for this
+* `-Locale` Get the Bing image of the day for this
   [region](https://msdn.microsoft.com/en-us/library/dd251064.aspx).
 
   **Possible values** `'auto'`, `'ar-XA'`, `'bg-BG'`, `'cs-CZ'`,
@@ -90,7 +94,7 @@ behavior.
   **Remarks** Setting this option to `0` will keep all images and will
   not remove any file.
 
-* `-resolution` Determines which image resolution will be downloaded.
+* `-Resolution` Determines which image resolution will be downloaded.
   If set to `'auto'` the script will try to determine which resolution
   is more appropriate based on your primary screen resolution.
 
@@ -100,7 +104,7 @@ behavior.
 
   **Default value** `'auto'`
 
-* `-downloadFolder` Destination folder to download the wallpapers to.
+* `-Path` Destination folder to download the wallpapers to.
 
   **Default value**
   `"$([Environment]::GetFolderPath("MyPictures"))\Wallpapers"`
@@ -108,6 +112,19 @@ behavior.
 
   **Remarks** The folder will automatically be created if it doesn’t
   exist already.
+
+* `-Delete` Removes images not in the most recent download.
+
+  **Default Value** Not used
+
+  **Remarks** If specified then all images in folder are sorted and 
+  only the most recent $count are kept and all others are deleted.
+
+* `-FromAlternativeSource` Use an unofficial source for wallpaper information.
+
+  **Default Value** Not used.
+
+  **Remarks** The unofficial endpoint contains a history that is longer than the offical endpoint (which is capped at 15 most recent images).
 
 ## Set as your wallpaper
 

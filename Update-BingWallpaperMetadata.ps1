@@ -1,6 +1,37 @@
-# Insert image data into the files EXIF using EXIFTOOL
-[string]$downloadFolder = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers")
-$fileCount = $(Get-ChildItem -Filter "*.jpg" "$downloadFolder\*" -Include "????-??-??.jpg" -Exclude "????-??-??_meta.jpg")
+# Update-BingWallpaperMetadata.ps1
+# Insert image data from the Bing Wallpaper feed into Bing Wallpaper images files using EXIFTOOL
+#
+# Copyright 2025 Richard Burte
+# License: MIT license
+
+<#
+    .SYNOPSIS
+    Fetch the Bing wallpaper image of the day metadata and then write into Bing Wallpaper images files using EXIFTOOL.
+
+    .DESCRIPTION
+    Fetch the Bing wallpaper image of the day. Can download previous day images as well. Skips downloading existing wallpapers.
+    Requires EXIFTOOL in path. e.g. 'brew install exiftool' or 'winget install --id=OliverBetz.ExifTool'
+
+    .PARAMETER Path
+    Specify the location where wallpapers will be downloaded.
+    Default: Wallpaper folder in your Pictures folder.
+    
+    .INPUTS
+    None. You can't pipe objects to Update-BingWallpaperMetadata.
+
+    .OUTPUTS
+    Writes data to images that match in specified path.
+
+    .LINK
+    Git Repo: https://github.com/arebee/Bing-wallpapers-x-plat
+
+#>
+
+Param(
+    [string]$Path = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers")
+)
+
+$fileCount = $(Get-ChildItem -Filter "*.jpg" "$Path\*" -Include "????-??-??.jpg" -Exclude "????-??-??_meta.jpg")
 if ($null -eq $fileCount) {
     Write-Verbose 'No files to process'
     return
