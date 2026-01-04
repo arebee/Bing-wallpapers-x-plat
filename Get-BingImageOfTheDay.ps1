@@ -1,16 +1,16 @@
-﻿# Bing Wallpapers
-# Fetch the Bing wallpaper image of the day
+﻿# Get the Bing "Image of the Day"
+# 
 # Forked from <https://github.com/timothymctim/Bing-wallpapers>
 #
-# Copyright (c) 2015 Tim van de Kamp, 2025 Richard Burte
+# Copyright (c) 2015 Tim van de Kamp, 2025-6 Richard Burte
 # License: MIT license
 
 <#
     .SYNOPSIS
-    Fetch the Bing wallpaper image of the day, or multiple from the archive.
+    Fetch the Bing image of the day, or multiple from the archive.
 
     .DESCRIPTION
-    Fetch the Bing wallpaper image of the day. Can download previous day images as well. Skips downloading existing wallpapers.
+    Fetch the Bing image of the day. Can download previous day images as well. Skips downloading existing images.
 
     .PARAMETER Locale
     Specifies the locale of the image to download. By using the value `'auto'`, Bing will attempt to determine an applicable locale based on your IP address.
@@ -36,7 +36,7 @@
     Default: False, use Bing endpoint
     
     .INPUTS
-    None. You can't pipe objects to Get-BingWallpaper.
+    None. You can't pipe objects to Get-BingImageOfTheDay.
 
     .OUTPUTS
     Writes images to specified path.

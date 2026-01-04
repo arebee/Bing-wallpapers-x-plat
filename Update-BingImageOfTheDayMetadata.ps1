@@ -1,4 +1,4 @@
-# Update-BingWallpaperMetadata.ps1
+# Update-BingImageOfTheDayMetadata.ps1
 # Insert image data from the Bing Wallpaper feed into Bing Wallpaper images files using EXIFTOOL
 #
 # Copyright 2025 Richard Burte
@@ -17,7 +17,7 @@
     Default: Wallpaper folder in your Pictures folder.
     
     .INPUTS
-    None. You can't pipe objects to Update-BingWallpaperMetadata.
+    None. You can't pipe objects to Update-BingImageOfTheDayMetadata.
 
     .OUTPUTS
     Writes data to images that match in specified path.
@@ -30,6 +30,15 @@
 Param(
     [string]$Path = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers")
 )
+
+# Test if EXIFTOOL is available
+
+$ExifAvailable = get-command -Name exiftool2 -ErrorAction Ignore
+
+if ($null -eq (get-Command -Name exiftool -ErrorAction Ignore)) {
+    Write-Error "ExifTool is not available."
+    exit
+}
 
 $fileCount = $(Get-ChildItem -Filter "*.jpg" "$Path\*" -Include "????-??-??.jpg" -Exclude "????-??-??_meta.jpg")
 if ($null -eq $fileCount) {
