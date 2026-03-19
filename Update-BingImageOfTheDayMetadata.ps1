@@ -33,7 +33,7 @@ function Update-BingImageOfTheDayMetadata {
     Param(
         [string]$Path = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers")
     )
-
+    $filesUpdatedCount = 0
     $AltMetadataUri = 'https://api45gabs.azurewebsites.net/api/sample/bingphotos'
 
     # Test if EXIFTOOL is available on the path 
@@ -132,5 +132,10 @@ function Update-BingImageOfTheDayMetadata {
         # Update the file with metadata and then rename the file
         $null = exiftool -overwrite_original -Title="$title" -Description="$description" -Copyright="$copyright" -CreatorWorkURL="$($imageMetadata.copyrightlink)" $($file.FullName)
         $null = Rename-Item -Path $file.FullName $($file.BaseName + "_meta" + $file.Extension)
+        $filesUpdatedCount++
     }
+    Write-Verbose ""
+    Write-Verbose "Summary"
+    Write-Verbose "$($filesToProcess.Count) image(s) identified to process"
+    Write-Verbose "$($filesUpdatedCount) image(s) updated"
 }
