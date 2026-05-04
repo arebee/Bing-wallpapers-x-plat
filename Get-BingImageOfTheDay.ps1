@@ -104,10 +104,10 @@ function Get-BingImageOfTheDay {
                 $width = $primaryScreen.Bounds.Width
                 $height = $primaryScreen.Bounds.Height
             }
-            elseif ($PSVersionTable.OS.Contains('Darwin')) {
+            elseif ($PSVersionTable.OS.Contains('macOS') -or $PSVersionTable.OS.Contains('Darwin')) {
                 Write-Verbose 'On MacOS'
                 $null = system_profiler SPDisplaysDataType -json | ConvertFrom-Json -OutVariable displayInfo
-                foreach ($display in $displayInfo[0].SPDisplaysDataType[0].spdisplays_ndrvs) {
+                foreach ($display in $displayInfo[0].SPDisplaysDataType[0].spdisplays_ndrvs[0]) {
                     if ($display.spdisplays_main -eq 'spdisplays_yes') {
                         [int]$width = $display._spdisplays_pixels.split('x')[0].Trim()
                         [int]$height = $display._spdisplays_pixels.split('x')[1].Trim()
@@ -120,6 +120,7 @@ function Get-BingImageOfTheDay {
                 $height = 1080
             }
 
+            Write-Verbose "Width: $width x Height: $height"
             # Determine the resolution to download based on width and height
             if ($width -le 1024) {
                 $Resolution = '1024x768'
