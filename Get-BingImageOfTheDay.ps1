@@ -46,7 +46,7 @@
 
 #>
 function Get-BingImageOfTheDay {
-    [CmdletBinding(SupportsShouldProcess=$true)]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         # Get the Bing image of this country
         [ValidateSet(
@@ -83,19 +83,32 @@ function Get-BingImageOfTheDay {
     )
 
     process {
+        # Contstants
+        $Const_Url_Image_Host = 'https://www.bing.com'
+        $Const_Url_Feed_Source = 'https://www.bing.com/HPImageArchive.aspx?format=js&pid=hp'
+        $Const_Url_Feed_AltSource = 'https://api45gabs.azurewebsites.net/api/sample/bingphotos'
+
+        # Check if download folder exists and otherwise create it
+        if (!(Test-Path $Path)) {
+            If ($WhatIfPreference -eq $true) {
+                Write-Output "Create Directory $Path"
+            }
+            else {
+                New-Item -ItemType Directory $Path
+            }
+        }
+
         # Max item count: the number of images we'll query for
         # [int]$maxItemCount = [System.Math]::max(1, [System.Math]::max($Count, 8))
         # URI to fetch the image locations from
         if ($Locale -eq 'auto') {
-            $market = ""
+            $market = ''
         }
         else {
             $market = "&mkt=$Locale"
         }
-        [string]$hostname = "https://www.bing.com"
-        [string]$uri = "$hostname/HPImageArchive.aspx?format=xml$market&pid=hp"
 
-        # Get the appropiate screen resolution
+        # Get the appropiate screen resolution, using OS specific probing
         if ($Resolution -eq 'auto') {
             if ($PSVersionTable.OS.Contains('Windows')) {
                 Write-Verbose 'On Windows'
@@ -115,12 +128,11 @@ function Get-BingImageOfTheDay {
                 }
             }
             else {
-                # Default for Linux
+                # Default for Linux HD
                 $width = 1920
                 $height = 1080
             }
 
-            Write-Verbose "Width: $width x Height: $height"
             # Determine the resolution to download based on width and height
             if ($width -le 1024) {
                 $Resolution = '1024x768'
@@ -140,89 +152,72 @@ function Get-BingImageOfTheDay {
             else {
                 $Resolution = 'UHD'
             }
-            Write-Verbose "Auto-Identified resolution = $Resolution, Width $width Height $height"
         }
+        Write-Verbose "Resolution: $resolution"
 
-        # Check if download folder exists and otherwise create it
-        if (!(Test-Path $Path)) {
-            If ($WhatIfPreference -eq $true){
-                Write-Output "Create Directory $Path"
-            } else {
-                New-Item -ItemType Directory $Path
-            }
+        # $items = New-Object System.Collections.ArrayList
+        if ($FromAlternateSource) {
+            # Uses a JSON format, all items returned. No "desc" field.
+            $jsonImgs = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri $Const_Url_Feed_AltSource).Content
         }
-
-        # Add paging support for when number requested > 8
-        # &idx=0&n=$maxItemCount
-        $pageSize = 8
-        $items = New-Object System.Collections.ArrayList
-        if ($Count -gt 0) {
-            if ($FromAlternateSource) {
-                $jsonImgs = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri 'https://api45gabs.azurewebsites.net/api/sample/bingphotos').Content
-                for ($i = 0; $i -lt $Count; $i++) {
-                    [datetime]$imageDate = [datetime]::ParseExact($jsonImgs[$i].startdate, 'yyyyMMdd', $null)
-                    [string]$imageUrl = "$hostname$($jsonImgs[$i].urlBase)_$Resolution.jpg"
-                    # Add item to our array list
-                    $item = New-Object System.Object
-                    Add-Member -Type NoteProperty -Name date -Value $imageDate -InputObject $item
-                    Add-Member -Type NoteProperty -Name url -Value $imageUrl -InputObject $item
-                    $null = $items.Add($item)
-                }
+        else {
+            # Using the JSON Format, which puts images in an images array.
+            # Add paging support for when the count of images requested > 8
+            # The most recent 12 images are available through the Bing API.
+            # It's a zero index page. Page 0 returns items 1-page size
+            # They have a bug on paging though so :shrug:
+            # &idx=0&n=$maxItemCount
+            $pageSize = 8 # Maximum page size 
+            <# Action when all if and elseif conditions are false #>
+            if ($Count -gt 15) { $Count = 15; Write-Verbose "Bing API supports a maximum of 15 images" }
+            $pageAndRemainder = [System.Math]::DivRem($Count, $pageSize)
+            # To support remainder logic vs 0 offset pages
+            if (($pageAndRemainder.item2 -eq 0) -and ($pagesAndRemainder.item1 -ne 0)) {
+                $pages = $pageAndRemainder.Item1 - 1
             }
             else {
-                <# Action when all if and elseif conditions are false #>
-                if ($Count -gt 15) { $Count = 15; Write-Verbose "Bing API supports a maximum of 15 images" }
-                $pageAndRemainder = [System.Math]::DivRem($Count, $pageSize)
-                # To support remainder logic vs 0 offset pages
-                if (($pageAndRemainder.item2 -eq 0) -and ($pagesAndRemainder.item1 -ne 0)) {
-                    $pages = $pageAndRemainder.Item1 - 1
-                }
-                else {
-                    $pages = $pageAndRemainder.item1
-                }
-                for ($i = 0; $i -le $pages; $i++) {
-                    if ($pages -eq $i) { $pageItems = $pageAndRemainder.Item2 } else { $pageItems = $pageSize }
-                    [string]$pageUri = $uri + "&idx=$($i * $pageSize)&n=$pageItems"
-                    Write-Verbose "Fetching Page $($i + 1)"
-                    $request = Invoke-WebRequest -Uri $pageUri -DisableKeepAlive -UserAgent 'parp-1.0'
-                    [xml]$content = $request.Content
-            
-                    foreach ($xmlImage in $content.images.image) {
-                        [datetime]$imageDate = [datetime]::ParseExact($xmlImage.startdate, 'yyyyMMdd', $null)
-                        [string]$imageUrl = "$hostname$($xmlImage.urlBase)_$Resolution.jpg"
-                
-                        # Add item to our array list
-                        $item = New-Object -TypeName PSCustomObject
-                        Add-Member -Type NoteProperty -Name date -Value $imageDate -InputObject $item
-                        Add-Member -Type NoteProperty -Name url -Value $imageUrl -InputObject $item
-                        $null = $items.Add($item)
-                    }
-                }
+                $pages = $pageAndRemainder.item1
+            }
+            for ($i = 0; $i -le $pages; $i++) {
+                if ($pages -eq $i) { $pageItems = $pageAndRemainder.Item2 } else { $pageItems = $pageSize }
+                [string]$pageUri = "$Const_Url_Feed_Source$market&idx=$($i * $pageSize)&n=$pageItems"
+                Write-Verbose "Fetching Page $($i + 1)"
+                $request = Invoke-WebRequest -Uri $pageUri -DisableKeepAlive -UserAgent 'parp-1.0' -UseBasicParsing
+                $jsonImgs += $(ConvertFrom-Json -InputObject $request.Content).Images
             }
         }
 
-        $items = $items | Sort-Object -Property date -Unique
-        Write-Verbose "$($items.length) images to check..."
-        $client = New-Object System.Net.WebClient
-        foreach ($item in $items) {
-            $baseName = $item.date.ToString("yyyy-MM-dd")
-            $destination = Join-Path $Path "$baseName.jpg"
-            $destinationMetadata = Join-Path $Path $($baseName + "_meta.jpg")
-            $url = $item.url
+        # Add utility properties
+        foreach ($item in $jsonImgs) {
+            [string]$imageDate = [datetime]::ParseExact($item.startdate, 'yyyyMMdd', $null).ToString("yyyy-MM-dd")
+            [string]$imageUrl = "$Const_Url_Image_Host$($item.urlBase)_$Resolution.jpg"
+            Add-Member -Type NoteProperty -Name imagedate -Value $imageDate -InputObject $item -Force
+            Add-Member -Type NoteProperty -Name imageurl -Value $imageUrl -InputObject $item -Force
+        }
 
+        # Download items
+        $jsonImgs = $jsonImgs | Sort-Object -Property date -Unique
+        Write-Verbose "$($jsonImgs.length) images to check..."
+        $client = New-Object System.Net.WebClient
+        foreach ($item in $jsonImgs) {
+            $destination = Join-Path $Path "$($item.imagedate).jpg"
+            $destinationMetadata = Join-Path $Path $($item.imagedate + "_meta.jpg")
+            
             # Download the enclosure if we haven't done so already
             if (!(Test-Path $destination) -and !(Test-Path $destinationMetadata)) {
                 Write-Verbose "Test-Path $destination $(Test-Path $destination)"
                 Write-Verbose "Test-Path $destinationMetadata $(Test-Path $destinationMetadata)"
                 if ($WhatIfPreference -eq $true) {
-                    Write-Output "Downloading image from: $url to: $destination"
-                } else {
-                    Write-Verbose "Downloading image from: $url to: $destination"
-                    $client.DownloadFile($url, "$destination")
+                    Write-Output "Downloading image from: $imageurl to: $destination"
+                }
+                else {
+                    Write-Verbose "Downloading image from: $imageurl to: $destination"
+                    $client.DownloadFile($item.imageurl, $destination)
                 }
             }
         }
         
+        # Delete switch logic
         if ($Delete -and ($Count -gt 0)) {
             # We do not want to keep every file; remove the old ones
             Write-Host "Cleaning the directory..."
@@ -233,7 +228,8 @@ function Get-BingImageOfTheDay {
                     $fileName = $_.FullName
                     if ($WhatIfPreference -eq $true) {
                         Write-Output "Deleting file $fileName"
-                    } else {
+                    }
+                    else {
                         Write-Verbose "Deleting file $fileName"
                         Remove-Item "$fileName"
                     }
