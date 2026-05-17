@@ -24,7 +24,7 @@
     Whether the script will delete all wallpapers not in the last $Count number when sorted.
 
     .PARAMETER Resolution
-    Specify the size of the file. Select from a set, or use "auto" to detect.
+    Specify the size of the file. Select from the set, or use "auto" to detect.
     Default is "auto".
     
     .PARAMETER Path
@@ -42,187 +42,201 @@
     Writes images to specified path.
 
     .LINK
-    Git Repo: https://github.com/arebee/Bing-wallpapers-x-plat
+    https://github.com/arebee/Bing-wallpapers-x-plat
 
 #>
+function Get-BingImageOfTheDay {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        # Get the Bing image of this country
+        [ValidateSet(
+            'auto', 'ar-XA', 'bg-BG', 'cs-CZ', 'da-DK', 'de-AT', 'de-CH',
+            'de-DE', 'el-GR', 'en-AU', 'en-CA', 'en-GB', 'en-ID', 'en-IE',
+            'en-IN', 'en-MY', 'en-NZ', 'en-PH', 'en-SG', 'en-US', 'en-XA',
+            'en-ZA', 'es-AR', 'es-CL', 'es-ES', 'es-MX', 'es-US', 'es-XL',
+            'et-EE', 'fi-FI', 'fr-BE', 'fr-CA', 'fr-CH', 'fr-FR', 'he-IL',
+            'hr-HR', 'hu-HU', 'it-IT', 'ja-JP', 'ko-KR', 'lt-LT', 'lv-LV',
+            'nb-NO', 'nl-BE', 'nl-NL', 'pl-PL', 'pt-BR', 'pt-PT', 'ro-RO',
+            'ru-RU', 'sk-SK', 'sl-SL', 'sv-SE', 'th-TH', 'tr-TR', 'uk-UA',
+            'zh-CN', 'zh-HK', 'zh-TW'
+        )][string]$Locale = 'auto',
 
-Param(
-    # Get the Bing image of this country
-    [ValidateSet(
-        'auto', 'ar-XA', 'bg-BG', 'cs-CZ', 'da-DK', 'de-AT', 'de-CH',
-        'de-DE', 'el-GR', 'en-AU', 'en-CA', 'en-GB', 'en-ID', 'en-IE',
-        'en-IN', 'en-MY', 'en-NZ', 'en-PH', 'en-SG', 'en-US', 'en-XA',
-        'en-ZA', 'es-AR', 'es-CL', 'es-ES', 'es-MX', 'es-US', 'es-XL',
-        'et-EE', 'fi-FI', 'fr-BE', 'fr-CA', 'fr-CH', 'fr-FR', 'he-IL',
-        'hr-HR', 'hu-HU', 'it-IT', 'ja-JP', 'ko-KR', 'lt-LT', 'lv-LV',
-        'nb-NO', 'nl-BE', 'nl-NL', 'pl-PL', 'pt-BR', 'pt-PT', 'ro-RO',
-        'ru-RU', 'sk-SK', 'sl-SL', 'sv-SE', 'th-TH', 'tr-TR', 'uk-UA',
-        'zh-CN', 'zh-HK', 'zh-TW'
-    )][string]$Locale = 'auto',
+        # Download the latest $Count wallpapers.
+        [ValidateRange("Positive")]
+        [int]$Count = 3,
 
-    # Download the latest $Count wallpapers.
-    [ValidateRange("Positive")]
-    [int]$Count = 3,
+        # Delete files in the folder that were not downloaded in this execution of the command.
+        [switch]$Delete,
 
-    # Delete files in the folder that were not downloaded in this execution of the command.
-    [switch]$Delete,
+        # Resolution of the image to download.
+        [ValidateSet(
+            'auto', '800x600', '1024x768', '1280x720', '1280x768', '1366x768',
+            '1920x1080', '1920x1200', '720x1280', '768x1024', '768x1280',
+            '768x1366', '1080x1920', 'UHD'
+        )][string]$Resolution = 'auto',
 
-    # Resolution of the image to download.
-    [ValidateSet(
-        'auto', '800x600', '1024x768', '1280x720', '1280x768', '1366x768',
-        '1920x1080', '1920x1200', '720x1280', '768x1024', '768x1280',
-        '768x1366', '1080x1920', 'UHD'
-    )][string]$Resolution = 'auto',
+        # Destination folder to download the wallpapers to. 
+        [string]$Path = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers"),
 
-    # Destination folder to download the wallpapers to. 
-    [string]$Path = $(Join-Path $([Environment]::GetFolderPath("MyPictures")) "Wallpapers"),
+        # Get wallpaper information from an unofficial alternative API with > 500 images
+        [switch]$FromAlternateSource
+    )
 
-    # Get wallpaper information from an unofficial alternative API with > 500 images
-    [switch]$FromAlternateSource
-)
+    process {
+        # Contstants
+        $Const_Url_Image_Host = 'https://www.bing.com'
+        $Const_Url_Feed_Source = 'https://www.bing.com/HPImageArchive.aspx?format=js&pid=hp'
+        $Const_Url_Feed_AltSource = 'https://api45gabs.azurewebsites.net/api/sample/bingphotos'
 
-# Max item count: the number of images we'll query for
-# [int]$maxItemCount = [System.Math]::max(1, [System.Math]::max($Count, 8))
-# URI to fetch the image locations from
-if ($Locale -eq 'auto') {
-    $market = ""
-}
-else {
-    $market = "&mkt=$Locale"
-}
-[string]$hostname = "https://www.bing.com"
-[string]$uri = "$hostname/HPImageArchive.aspx?format=xml$market&pid=hp"
-
-# Get the appropiate screen resolution
-if ($Resolution -eq 'auto') {
-    if ($PSVersionTable.OS.Contains('Windows')) {
-        Write-Verbose 'On Windows'
-        Add-Type -AssemblyName System.Windows.Forms
-        $primaryScreen = [System.Windows.Forms.Screen]::AllScreens | Where-Object { $_.Primary -eq 'True' }
-        $width = $primaryScreen.Bounds.Width
-        $height = $primaryScreen.Bounds.Height
-    }
-    elseif ($PSVersionTable.OS.Contains('Darwin')) {
-        Write-Verbose 'On MacOS'
-        $null = system_profiler SPDisplaysDataType -json | ConvertFrom-Json -OutVariable displayInfo
-        foreach ($display in $displayInfo[0].SPDisplaysDataType[0].spdisplays_ndrvs) {
-            if ($display.spdisplays_main -eq 'spdisplays_yes') {
-                [int]$width = $display._spdisplays_pixels.split('x')[0].Trim()
-                [int]$height = $display._spdisplays_pixels.split('x')[1].Trim()
+        # Check if download folder exists and otherwise create it
+        if (!(Test-Path $Path)) {
+            If ($WhatIfPreference -eq $true) {
+                Write-Output "Create Directory $Path"
+            }
+            else {
+                New-Item -ItemType Directory $Path
             }
         }
-    }
-    else {
-        # Default for Linux
-        $width = 1920
-        $height = 1080
-    }
 
-    # Determine the resolution to download based on width and height
-    if ($width -le 1024) {
-        $Resolution = '1024x768'
-    }
-    elseif ($width -le 1280) {
-        $Resolution = '1280x720'
-    }
-    elseif ($width -le 1366) {
-        $Resolution = '1366x768'
-    }
-    elseif ($height -le 1080) {
-        $Resolution = '1920x1080'
-    }
-    elseif ($width -le 1920) {
-        $Resolution = '1920x1080'
-    }
-    else {
-        $Resolution = 'UHD'
-    }
-    Write-Verbose "Auto-Identified resolution = $Resolution, Width $width Height $height"
-}
-
-# Check if download folder exists and otherwise create it
-if (!(Test-Path $Path)) {
-    New-Item -ItemType Directory $Path
-}
-
-# Add paging support for when number requested > 8
-# &idx=0&n=$maxItemCount
-$pageSize = 8
-$items = New-Object System.Collections.ArrayList
-if ($Count -gt 0) {
-    if ($FromAlternateSource) {
-        $jsonImgs = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri 'https://api45gabs.azurewebsites.net/api/sample/bingphotos').Content
-        for ($i = 0; $i -lt $Count; $i++) {
-            [datetime]$imageDate = [datetime]::ParseExact($jsonImgs[$i].startdate, 'yyyyMMdd', $null)
-            [string]$imageUrl = "$hostname$($jsonImgs[$i].urlBase)_$Resolution.jpg"
-            # Add item to our array list
-            $item = New-Object System.Object
-            $item | Add-Member -Type NoteProperty -Name date -Value $imageDate
-            $item | Add-Member -Type NoteProperty -Name url -Value $imageUrl
-            $null = $items.Add($item)
-        }
-    }
-    else {
-        <# Action when all if and elseif conditions are false #>
-        if ($Count -gt 15) { $Count = 15; Write-Verbose "Bing API supports a maximum of 15 images" }
-        $pageAndRemainder = [System.Math]::DivRem($Count, $pageSize)
-        # To support remainder logic vs 0 offset pages
-        if (($pageAndRemainder.item2 -eq 0) -and ($pagesAndRemainder.item1 -ne 0)) {
-            $pages = $pageAndRemainder.Item1 - 1
+        # Max item count: the number of images we'll query for
+        # [int]$maxItemCount = [System.Math]::max(1, [System.Math]::max($Count, 8))
+        # URI to fetch the image locations from
+        if ($Locale -eq 'auto') {
+            $market = ''
         }
         else {
-            $pages = $pageAndRemainder.item1
+            $market = "&mkt=$Locale"
         }
-        for ($i = 0; $i -le $pages; $i++) {
-            if ($pages -eq $i) { $pageItems = $pageAndRemainder.Item2 } else { $pageItems = $pageSize }
-            [string]$pageUri = $uri + "&idx=$($i * $pageSize)&n=$pageItems"
-            Write-Verbose "Fetching Page $($i + 1)"
-            $request = Invoke-WebRequest -Uri $pageUri -DisableKeepAlive -UserAgent 'parp-1.0'
-            [xml]$content = $request.Content
-            
-            foreach ($xmlImage in $content.images.image) {
-                [datetime]$imageDate = [datetime]::ParseExact($xmlImage.startdate, 'yyyyMMdd', $null)
-                [string]$imageUrl = "$hostname$($xmlImage.urlBase)_$Resolution.jpg"
-                
-                # Add item to our array list
-                $item = New-Object System.Object
-                $item | Add-Member -Type NoteProperty -Name date -Value $imageDate
-                $item | Add-Member -Type NoteProperty -Name url -Value $imageUrl
-                $null = $items.Add($item)
+
+        # Get the appropiate screen resolution, using OS specific probing
+        if ($Resolution -eq 'auto') {
+            if ($PSVersionTable.OS.Contains('Windows')) {
+                Write-Verbose 'On Windows'
+                Add-Type -AssemblyName System.Windows.Forms
+                $primaryScreen = [System.Windows.Forms.Screen]::AllScreens | Where-Object { $_.Primary -eq 'True' }
+                $width = $primaryScreen.Bounds.Width
+                $height = $primaryScreen.Bounds.Height
+            }
+            elseif ($PSVersionTable.OS.Contains('macOS') -or $PSVersionTable.OS.Contains('Darwin')) {
+                Write-Verbose 'On MacOS'
+                $null = system_profiler SPDisplaysDataType -json | ConvertFrom-Json -OutVariable displayInfo
+                foreach ($display in $displayInfo[0].SPDisplaysDataType[0].spdisplays_ndrvs[0]) {
+                    if ($display.spdisplays_main -eq 'spdisplays_yes') {
+                        [int]$width = $display._spdisplays_pixels.split('x')[0].Trim()
+                        [int]$height = $display._spdisplays_pixels.split('x')[1].Trim()
+                    }
+                }
+            }
+            else {
+                # Default for Linux HD
+                $width = 1920
+                $height = 1080
+            }
+
+            # Determine the resolution to download based on width and height
+            if ($width -le 1024) {
+                $Resolution = '1024x768'
+            }
+            elseif ($width -le 1280) {
+                $Resolution = '1280x720'
+            }
+            elseif ($width -le 1366) {
+                $Resolution = '1366x768'
+            }
+            elseif ($height -le 1080) {
+                $Resolution = '1920x1080'
+            }
+            elseif ($width -le 1920) {
+                $Resolution = '1920x1080'
+            }
+            else {
+                $Resolution = 'UHD'
             }
         }
-    }
-}
+        Write-Verbose "Resolution: $resolution"
 
-$items = $items | Sort-Object -Property date -Unique
-Write-Verbose "$($items.length) images to check..."
-$client = New-Object System.Net.WebClient
-foreach ($item in $items) {
-    $baseName = $item.date.ToString("yyyy-MM-dd")
-    $destination = Join-Path $Path "$baseName.jpg"
-    $destinationMetadata = Join-Path $Path $($baseName + "_meta.jpg")
-    $url = $item.url
-
-    # Download the enclosure if we haven't done so already
-    if (!(Test-Path $destination) -and !(Test-Path $destinationMetadata)) {
-        Write-Verbose "Test-Path $destination $(Test-Path $destination)"
-        Write-Verbose "Test-Path $destinationMetadata $(Test-Path $destinationMetadata)"
-        Write-Verbose "Downloading image`nfrom: $url`nto: $destination"
-        $client.DownloadFile($url, "$destination")
-    }
-}
-
-if ($Delete -and ($Count -gt 0)) {
-    # We do not want to keep every file; remove the old ones
-    Write-Host "Cleaning the directory..."
-    $i = 1
-    Get-ChildItem -Filter "*.jpg" "$Path\*" -Include "????-??-??.jpg", "????-??-??_meta.jpg" | Sort-Object -Descending FullName | ForEach-Object {
-        if ($i -gt $Count) {
-            # We have more files than we want, delete the extra files
-            $fileName = $_.FullName
-            Write-Debug "Deleting file $fileName"
-            Remove-Item "$fileName"
+        # $items = New-Object System.Collections.ArrayList
+        if ($FromAlternateSource) {
+            # Uses a JSON format, all items returned. No "desc" field.
+            $jsonImgs = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri $Const_Url_Feed_AltSource).Content
         }
-        $i++
+        else {
+            # Using the JSON Format, which puts images in an images array.
+            # Add paging support for when the count of images requested > 8
+            # The most recent 12 images are available through the Bing API.
+            # It's a zero index page. Page 0 returns items 1-page size
+            # They have a bug on paging though so :shrug:
+            # &idx=0&n=$maxItemCount
+            $pageSize = 8 # Maximum page size 
+            <# Action when all if and elseif conditions are false #>
+            if ($Count -gt 15) { $Count = 15; Write-Verbose "Bing API supports a maximum of 15 images" }
+            $pageAndRemainder = [System.Math]::DivRem($Count, $pageSize)
+            # To support remainder logic vs 0 offset pages
+            if (($pageAndRemainder.item2 -eq 0) -and ($pagesAndRemainder.item1 -ne 0)) {
+                $pages = $pageAndRemainder.Item1 - 1
+            }
+            else {
+                $pages = $pageAndRemainder.item1
+            }
+            for ($i = 0; $i -le $pages; $i++) {
+                if ($pages -eq $i) { $pageItems = $pageAndRemainder.Item2 } else { $pageItems = $pageSize }
+                [string]$pageUri = "$Const_Url_Feed_Source$market&idx=$($i * $pageSize)&n=$pageItems"
+                Write-Verbose "Fetching Page $($i + 1)"
+                $request = Invoke-WebRequest -Uri $pageUri -DisableKeepAlive -UserAgent 'parp-1.0' -UseBasicParsing
+                $jsonImgs += $(ConvertFrom-Json -InputObject $request.Content).Images
+            }
+        }
+
+        # Add utility properties
+        foreach ($item in $jsonImgs) {
+            [string]$imageDate = [datetime]::ParseExact($item.startdate, 'yyyyMMdd', $null).ToString("yyyy-MM-dd")
+            [string]$imageUrl = "$Const_Url_Image_Host$($item.urlBase)_$Resolution.jpg"
+            Add-Member -Type NoteProperty -Name imagedate -Value $imageDate -InputObject $item -Force
+            Add-Member -Type NoteProperty -Name imageurl -Value $imageUrl -InputObject $item -Force
+        }
+
+        # Download items
+        $jsonImgs = $jsonImgs | Sort-Object -Property date -Unique
+        Write-Verbose "$($jsonImgs.length) images to check..."
+        $client = New-Object System.Net.WebClient
+        foreach ($item in $jsonImgs) {
+            $destination = Join-Path $Path "$($item.imagedate).jpg"
+            $destinationMetadata = Join-Path $Path $($item.imagedate + "_meta.jpg")
+            
+            # Download the enclosure if we haven't done so already
+            if (!(Test-Path $destination) -and !(Test-Path $destinationMetadata)) {
+                Write-Verbose "Test-Path $destination $(Test-Path $destination)"
+                Write-Verbose "Test-Path $destinationMetadata $(Test-Path $destinationMetadata)"
+                if ($WhatIfPreference -eq $true) {
+                    Write-Output "Downloading image from: $imageurl to: $destination"
+                }
+                else {
+                    Write-Verbose "Downloading image from: $imageurl to: $destination"
+                    $client.DownloadFile($item.imageurl, $destination)
+                }
+            }
+        }
+        
+        # Delete switch logic
+        if ($Delete -and ($Count -gt 0)) {
+            # We do not want to keep every file; remove the old ones
+            Write-Host "Cleaning the directory..."
+            $i = 1
+            Get-ChildItem -Filter "*.jpg" "$Path\*" -Include "????-??-??.jpg", "????-??-??_meta.jpg" | Sort-Object -Descending FullName | ForEach-Object {
+                if ($i -gt $Count) {
+                    # We have more files than we want, delete the extra files
+                    $fileName = $_.FullName
+                    if ($WhatIfPreference -eq $true) {
+                        Write-Output "Deleting file $fileName"
+                    }
+                    else {
+                        Write-Verbose "Deleting file $fileName"
+                        Remove-Item "$fileName"
+                    }
+                }
+                $i++
+            }
+        }
+
     }
 }
