@@ -35,6 +35,8 @@ function Update-BingImageOfTheDayMetadata {
     )
     $filesUpdatedCount = 0
     $AltMetadataUri = 'https://api45gabs.azurewebsites.net/api/sample/bingphotos'
+    $Const_Bing_Metadata_URL_1 = "https://www.bing.com/HPImageArchive.aspx?format=js&mkt=$PSCulture&pid=hp&idx=0&n=8"
+    $Const_Bing_Metadata_URL_2 = "https://www.bing.com/HPImageArchive.aspx?format=js&mkt=$PSCulture&pid=hp&idx=8&n=8"
 
     # Test if EXIFTOOL is available on the path 
     if ($null -eq (get-Command -Name exiftool -ErrorAction Ignore)) {
@@ -49,7 +51,7 @@ function Update-BingImageOfTheDayMetadata {
     if (Test-Path -Path $Path -PathType Container) {
         # List the files that should have metadata added. Instead of examining all files we look at those that 
         # do not have _meta as the last part of the filename. This convention improves the speed of execution.
-        $filesToProcess = $(Get-ChildItem -Filter "*.jpg" "$Path\*" -Include "????-??-??.jpg" -Exclude "????-??-??_meta.jpg")
+        $filesToProcess = $(Get-ChildItem -Filter "*.jpg" -Path "$Path\*" -Include "????-??-??.jpg" -Exclude "????-??-??_meta.jpg")
         if ($null -eq $filesToProcess) {
             Write-Verbose 'No files to process.'
             return
@@ -72,65 +74,67 @@ function Update-BingImageOfTheDayMetadata {
 
     # Fetch the metadata to apply from the Alternative endpoint.
     Write-Verbose "Getting Alt Metadata"
-    $MyJsonImages = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri $AltMetadataUri).Content
+    # $MyJsonImages = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri $AltMetadataUri).Content
+    [System.Collections.ArrayList]$CombinedImageMetadata = ConvertFrom-Json -InputObject $(Invoke-WebRequest -UseBasicParsing -Uri $AltMetadataUri).Content
     
     # Fetch metadata from the Bing Image of the Day endpoint.
-    [xml]$MyXmlImages = ''
-    Write-Verbose "Getting Bing XML Metadata"
-    $MyXmlImages = (Invoke-WebRequest -Uri "https://www.bing.com/HPImageArchive.aspx?format=xml&mkt=$PSCulture&pid=hp&idx=0&n=8").Content
+    Write-Verbose "Getting Bing Metadata"
+    [System.Collections.ArrayList]$BingMetadata = $(ConvertFrom-Json((Invoke-WebRequest -Uri $Const_Bing_Metadata_URL_1).Content)).Images
+    [System.Collections.ArrayList]$BingMetadata += $(ConvertFrom-Json((Invoke-WebRequest -Uri $Const_Bing_Metadata_URL_2).Content)).Images
+    
+    Write-Verbose $CombinedImageMetadata.Count
+    foreach ($item in $BingMetadata) {
+        $MatchesInCombined = $CombinedImageMetadata.Where({ $_.startdate -eq $item.startdate })
+        foreach ($match in $MatchesInCombined) {
+            Add-Member -Type NoteProperty -Name desc -Value $item.desc -InputObject $match -Force
+            Add-Member -Type NoteProperty -Name caption -Value $item.caption -InputObject $match -Force
+            Add-Member -Type NoteProperty -Name copyrightonly -Value $item.copyrightonly -InputObject $match -Force
+        }
+    }
     
     # Process each file
     foreach ($file in ($filesToProcess | Sort-Object -Descending)) {
-        Write-Verbose ""
-        Write-Verbose "Processing '$($file.FullName)'"
+        Write-Verbose "`nProcessing '$($file.FullName)'"
         $existingCopyRight = exiftool -Copyright $($file.FullName)
         if ($null -ne $existingCopyRight) {
             Write-Verbose "$($file.FullName) already has copyright info"
             continue
         }
         $startDate = $file.BaseName.Replace('-', '').Trim()    
-        $imageMetadata = $MyJsonImages.Where{ $PSItem.startdate -eq $startDate }[0]
+        $imageMetadata = $CombinedImageMetadata.Where{ $_.startdate -eq $startDate }[0]
         if (($null -eq $imageMetadata) -or ('' -eq $imageMetadata )) {
-            # Check the XML data for the file, and create an equivilent object if it is found
-            try {
-                Write-Verbose "Check Bing official endpoint data."
-                $hash = @{"copyright" = ''; "title" = '' }
-                $imageMetadata = [pscustomobject]$hash
-                Write-Verbose "//image[startdate[text() = '$startDate']]"
-                $imageMetadata.copyright = $(Select-Xml -Xml $MyXmlImages -XPath "//image[startdate[text() = '$startDate']]").Node.SelectSingleNode('copyright').InnerText.Trim()
-                Write-Verbose "ImageMetadata.Copyright: $($imageMetadata.copyright)"
-                $imageMetadata.title = $(Select-Xml -Xml $MyXmlImages -XPath "//image[startdate[text() = '$startDate']]").Node.SelectSingleNode('headline').InnerText.Trim()
-                Write-Verbose "ImageMetadata.title: $($imageMetadata.title)"
-                if ([string]::IsNullOrEmpty($imageMetadata.title)) {
-                    Write-Verbose "No metadata available for $file"
-                    continue
-                }
-            }
-            catch {
-                Write-Verbose "No metadata available for $file"
-                continue
-            }
+            Write-Verbose "No metadata available for $file"
+            continue
         }
-    
-        Write-Verbose "Transforming copyright info into description and copyright"
-        Write-Verbose $($imageMetadata.copyright)
         
-        $splitSourceCopyright = $imageMetadata.copyright.split('(')
-        $description = $splitSourceCopyright[0].trim()
-        $copyright = $splitSourceCopyright[1].substring(0, $splitSourceCopyright[1].length - 2)
+        if ($imageMetadata.PSObject.Properties.Name -contains 'desc'){
+            $description = $imageMetadata.desc
+            $copyright = $imageMetadata.copyrightonly
+            $caption = $imageMetadata.caption
+        } else {
+            Write-Verbose "Transforming copyright info into description and copyright"
+            Write-Verbose $($imageMetadata.copyright)
+            $splitSourceCopyright = $imageMetadata.copyright.split('(')
+            $description = $splitSourceCopyright[0].trim()
+            $copyright = $splitSourceCopyright[1].substring(0, $splitSourceCopyright[1].length - 2)
+            $caption = $description
+        }
+        
         $title = $imageMetadata.title
         
+        Write-Verbose "Title: $title"
+        Write-Verbose "Caption: $caption"
         Write-Verbose "Description: $description"
         Write-Verbose "Copyright: $copyright"
         
         if ($WhatIfPreference) {
             "WhatIf: Updating $($file.FullName) to $($file.BaseName + "_meta" + $file.Extension)"
-            continue
+            continue    
         }
         Write-Verbose "Updating $($file.FullName) to $($file.BaseName + "_meta" + $file.Extension)"
         
         # Update the file with metadata and then rename the file
-        $null = exiftool -overwrite_original -Title="$title" -Description="$description" -Copyright="$copyright" -CreatorWorkURL="$($imageMetadata.copyrightlink)" $($file.FullName)
+        $null = exiftool -overwrite_original -Title="$title" -iptc:ObjectName="$caption" -iptc:Caption-Abstract="$caption" -Description="$description" -Copyright="$copyright" -CreatorWorkURL="$($imageMetadata.copyrightlink)" $($file.FullName)
         $null = Rename-Item -Path $file.FullName $($file.BaseName + "_meta" + $file.Extension)
         $filesUpdatedCount++
     }
