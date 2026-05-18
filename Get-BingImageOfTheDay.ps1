@@ -196,17 +196,19 @@ function Get-BingImageOfTheDay {
         }
 
         # Download items
-        $jsonImgs = $jsonImgs | Sort-Object -Property date -Unique
-        Write-Verbose "$($jsonImgs.length) images to check..."
+        $jsonImgs = $($jsonImgs | Sort-Object -Property startdate -Unique -Descending)
+        Write-Verbose "Most recent $Count images to check from $($jsonImgs.length)"
+        $i = 0
         $client = New-Object System.Net.WebClient
         foreach ($item in $jsonImgs) {
+                
             $destination = Join-Path $Path "$($item.imagedate).jpg"
-            $destinationMetadata = Join-Path $Path $($item.imagedate + "_meta.jpg")
-            
+            $destinationWithMetadata = Join-Path $Path $($item.imagedate + "_meta.jpg")
+                
             # Download the enclosure if we haven't done so already
-            if (!(Test-Path $destination) -and !(Test-Path $destinationMetadata)) {
+            if (!(Test-Path $destination) -and !(Test-Path $destinationWithMetadata)) {
                 Write-Verbose "Test-Path $destination $(Test-Path $destination)"
-                Write-Verbose "Test-Path $destinationMetadata $(Test-Path $destinationMetadata)"
+                Write-Verbose "Test-Path $destinationWithMetadata $(Test-Path $destinationWithMetadata)"
                 if ($WhatIfPreference -eq $true) {
                     Write-Output "Downloading image from: $imageurl to: $destination"
                 }
@@ -215,6 +217,9 @@ function Get-BingImageOfTheDay {
                     $client.DownloadFile($item.imageurl, $destination)
                 }
             }
+            $i++
+            if ($i -eq $Count) { break }
+            
         }
         
         # Delete switch logic
