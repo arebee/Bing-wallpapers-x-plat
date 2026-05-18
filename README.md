@@ -9,15 +9,16 @@ mainly to add MacOS support. Thanks for the project [Tim!](https://github.com/ti
 platforms. While I haven't tested on Linux, it has worked on one
 user's machine. :-)
 1. Can use an alternate (unofficial) source of image metadata by
-specifying `-useJsonSource` on the command line. The official `xml`
-endpoint supports the last 14 days.
+specifying `-FromAlternateSource` on the command line. The official Bing
+endpoint supports the last 15 days, the unofficial endpoint has over 1000 entries.
 1. A script (`update-imagemetadata.ps1`) that uses [ExifTool](https://exiftool.org/)
 to update the image metadata in the source files to reflect the
-metadata in the feed. The images don't include them, strangely.
+metadata in the feed. The downloaded images don't include them, strangely.
     1. ExifTool is available for MacOS and Windows, but not Linux.
-    1. This script uses the information in the JSON endpoint source.
-1. Renamed script and paramaters to be more vernacular PowerShell.
-1. Updated to export functions using a Module manifest.
+    1. This script uses the information in both the Bing API and the JSON endpoint source. The Bing API has more detailed descriptions.
+1. Renamed script and paramaters to be more idiomatic PowerShell.
+1. Now supports -WhatIf.
+1. Updated to include a Powershell Module manifest.
 
 ### Added Parameters
 
@@ -26,7 +27,7 @@ metadata in the feed. The images don't include them, strangely.
 1. Support for the `auto` resolution detection on MacOS relies on the
 information returned from `system_profiler SPDisplaysDataType` and
 with multiple displays this may provide a lower resolution than
-you may desire. Set `$VerbsosePreference = 'Continue'` to see
+you may desire. Set `$VerbsosePreference = 'Continue'` or use the `-Verbose` switch to see
 diagnostic messages such as the screen resolution detected if you
 don't provide a preference. This seemed to occur in a dual monitor
 situation where the retina display in the laptop and is mirroring
@@ -44,13 +45,12 @@ check out his repos too.
 
 ## Bing image of the day
 
-This Windows PowerShell script automatically fetches the Bing image of
-the day.
+This Windows PowerShell script fetches the Bing "Image of the Day".
 Using this script you can set the Bing image of the day as your
 wallpaper.
 
-The script uses the XML page of [Microsoft Bing](https://www.bing.com/)
-to download the images.
+The script uses the API backing the [Microsoft Bing](https://www.bing.com/)
+page to download the images.
 With a few extra steps, the script allows you to set your wallpaper to
 the Bing image of the day, just like using [Bing
 desktop](http://blogs.msdn.com/b/buckh/archive/2013/01/02/bing-desktop-set-your-background-to-the-bing-image-of-the-day.aspx)
@@ -62,8 +62,9 @@ install).
 The script supports several options which allows you to customize the
 behavior.
 
-* `-Locale` Get the Bing image of the day for this
+* `-Locale <string>` Get the Bing image of the day for the specified
   [region](https://msdn.microsoft.com/en-us/library/dd251064.aspx).
+  If auto is used, the API endpoint will select the locale used.
 
   **Possible values** `'auto'`, `'ar-XA'`, `'bg-BG'`, `'cs-CZ'`,
   `'da-DK'`, `'de-AT'`, `'de-CH'`, `'de-DE'`, `'el-GR'`, `'en-AU'`,
@@ -80,20 +81,28 @@ behavior.
   **Default value** `'auto'`
 
   **Remarks** By using the value `'auto'`, Bing will attempt to
-  determine an applicable locale based on your IP address.
+  determine an applicable locale.
 
   Currently, only the values `'de-DE'`, `'en-AU'`, `'en-CA'`, `'en-GB'`,
   `'en-IN'`, `'en-US'`, `'fr-CA'`, `'fr-FR'`, `'ja-JP'`, and `'zh-CN'`
   will have their own localized version. Other values will be considered
   as the “Rest of the World” by Bing.
 
-* `-files` Keep only this number of images in the folder, *any other
-  file matching* `????-??-??.jpg` *will be* **removed**!
+* `-Count <Int32>` Will fetch the most recent `-Count` images. When used
+  with `-Delete` it will keep only this number of images in the folder,
+  *any other file matching* `????-??-??.jpg` *will be* **removed**!
 
   **Default value** `3`
 
   **Remarks** Setting this option to `0` will keep all images and will
   not remove any file.
+
+* `-Delete [<SwitchParameter>]` Removes images not in the most recent download.
+
+  **Default Value** Not used
+
+  **Remarks** If specified then all images in folder are sorted and 
+  only the most recent $count are kept and all others are deleted.
 
 * `-Resolution` Determines which image resolution will be downloaded.
   If set to `'auto'` the script will try to determine which resolution
@@ -105,27 +114,24 @@ behavior.
 
   **Default value** `'auto'`
 
-* `-Path` Destination folder to download the wallpapers to.
+* `-FromAlternativeSource [<SwitchParameter>]` Use an unofficial source for wallpaper information.
+
+  **Default Value** Not used.
+
+  **Remarks** The unofficial endpoint contains a history that is longer than the offical endpoint (which is capped at 15 most recent images).
+
+* `-Path` Destination folder to download the images to.
 
   **Default value**
   `"$([Environment]::GetFolderPath("MyPictures"))\Wallpapers"`
   (the subfolder `Wallpapers` inside your default Pictures folder)
 
   **Remarks** The folder will automatically be created if it doesn’t
-  exist already.
+  exist already. If unspecified the system images folder will be used
+  with a Wallpaper subfolder.
 
-* `-Delete` Removes images not in the most recent download.
-
-  **Default Value** Not used
-
-  **Remarks** If specified then all images in folder are sorted and 
-  only the most recent $count are kept and all others are deleted.
-
-* `-FromAlternativeSource` Use an unofficial source for wallpaper information.
-
-  **Default Value** Not used.
-
-  **Remarks** The unofficial endpoint contains a history that is longer than the offical endpoint (which is capped at 15 most recent images).
+* `-WhatIf [<SwitchParameter>]` Execute script without making changes to
+  the local system.
 
 ## Set as your wallpaper
 
